@@ -727,12 +727,7 @@ async function connectHelmetDirectly(helmetId) {
       btn.disabled = false;
       btn.innerHTML = origHtml;
     }
-    const retry = confirm(
-      `Could not connect to ESP32 at ${ip}.\n\nPlease ensure your computer is connected to the 'SmartGuard-ESP32' Wi-Fi network.\n\nDo you want to reconfigure the IP address for ${helmet.id}?`
-    );
-    if (retry) {
-      openConnectModal(helmetId);
-    }
+    console.warn(`[SmartGuard] Could not connect to ESP32 at ${ip}:`, err);
   }
 }
 window.connectHelmetDirectly = connectHelmetDirectly;
