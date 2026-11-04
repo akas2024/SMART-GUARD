@@ -76,7 +76,7 @@ const float TEMP_HIGH_C =
     42.0; // Dangerous heat stress (prevents false alarms at room temp)
 const float HUMIDITY_LOW_PERCENT = 10.0;
 const float HUMIDITY_HIGH_PERCENT = 92.0;
-const int MQ135_HIGH_RAW = 1800; // Requires genuine smoke or gas to trigger
+const int MQ135_HIGH_RAW = 2400; // Alert threshold kept at 2400
 
 // =====================================================
 // FALL / STRIKE DETECTION SETTINGS
@@ -223,7 +223,7 @@ const unsigned long MPU_INTERVAL_MS =
 const unsigned long MAX_INTERVAL_MS =
     50; // Staggered to eliminate I2C bus collisions
 
-const unsigned long ENV_INTERVAL_MS = 500;
+const unsigned long ENV_INTERVAL_MS = 100; // 100ms fast-sampling for MQ135 responsiveness
 const unsigned long SERIAL_INTERVAL_MS = 3000;
 
 // =====================================================
@@ -1164,12 +1164,12 @@ void updateEnvironmentWarning() {
   bool readingExceeded = temperatureBad || humidityBad || airBad;
   unsigned long now = millis();
 
-  // If in cooldown after worker assurance, temporarily suppress re-alarming
-  if (now < environmentCooldownUntilMs) {
-    return;
-  }
-
   if (readingExceeded) {
+
+    // If in cooldown after worker assurance, temporarily suppress re-alarming
+    if (now < environmentCooldownUntilMs) {
+      return;
+    }
 
     if (!environmentWarning) {
 
@@ -1189,7 +1189,7 @@ void updateEnvironmentWarning() {
 
   } else {
 
-    // Readings have returned within normal safe limits
+    // Readings have returned within normal safe limits -> clear automatically
     if (environmentWarning || environmentAcknowledged) {
 
       environmentWarning = false;
@@ -1197,6 +1197,10 @@ void updateEnvironmentWarning() {
       environmentAcknowledged = false;
 
       setEvent("Environmental readings returned within configured limits");
+
+      Serial.println("[MQ135] Air quality returned to normal. Environmental warning cleared.");
+
+      updateOutputs();
     }
   }
 }
@@ -1943,7 +1947,22 @@ void loop() {
 
     lastEnvironmentReadMs = now;
 
-    mq135Raw = analogRead(MQ135_PIN);
+    // Fast multi-sample oversampling (4 samples) to filter ADC electrical jitter
+    int rawSum = 0;
+    for (int i = 0; i < 4; i++) {
+      rawSum += analogRead(MQ135_PIN);
+      delayMicroseconds(150);
+    }
+    int currentSample = rawSum / 4;
+
+    // Fast-response adaptive filter:
+    // Uses 80% weight on new reading for immediate gas/smoke response and rapid clean-air recovery,
+    // with 20% smoothing to eliminate false noise spikes.
+    if (mq135Raw == 0) {
+      mq135Raw = currentSample;
+    } else {
+      mq135Raw = (int)(0.80f * currentSample + 0.20f * mq135Raw + 0.5f);
+    }
 
     updateEnvironmentWarning();
   }
