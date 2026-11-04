@@ -661,23 +661,24 @@ async function connectHelmetDirectly(helmetId) {
   let origHtml = "";
   if (btn) {
     origHtml = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = `
-      <svg class="spin-anim" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="12" y1="2" x2="12" y2="6"/>
-        <line x1="12" y1="18" x2="12" y2="22"/>
-        <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/>
-        <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/>
-        <line x1="2" y1="12" x2="6" y2="12"/>
-        <line x1="18" y1="12" x2="22" y2="12"/>
-        <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/>
-        <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>
-      </svg>
-      <span>Connecting...</span>
-    `;
   }
 
   const ip = helmet.ip || "192.168.4.1";
+
+  // Connect immediately on the web page & save active session
+  activeConnectedHelmetId = helmet.id;
+  localStorage.removeItem("smartguard_is_disconnected");
+  localStorage.setItem("smartguard_active_helmet_id", helmet.id);
+  localStorage.setItem("smartguard_active_worker_name", helmet.name);
+  localStorage.setItem("smartguard_active_ip", ip);
+  localStorage.setItem("smartguard_active_zone", helmet.zone || "Zone C - Chemical Storage");
+
+  // Re-render card with live values and Disconnect button
+  renderFleet(helmet.id);
+
+  // Start auto-heartbeat to verify Wi-Fi connection continuously
+  startHeartbeatMonitor(helmet.id);
+
   const url = (window.location.hostname && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) ? "/api" : `http://${ip}/api`;
 
   try {
@@ -710,24 +711,9 @@ async function connectHelmetDirectly(helmetId) {
     }
 
     saveFleetData();
-
-    activeConnectedHelmetId = helmet.id;
-    localStorage.removeItem("smartguard_is_disconnected");
-    localStorage.setItem("smartguard_active_helmet_id", helmet.id);
-    localStorage.setItem("smartguard_active_worker_name", helmet.name);
-    localStorage.setItem("smartguard_active_ip", ip);
-
-    // Re-render card with live values and Disconnect button
     renderFleet(helmet.id);
-
-    // Start auto-heartbeat to verify Wi-Fi connection continuously
-    startHeartbeatMonitor(helmet.id);
   } catch (err) {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = origHtml;
-    }
-    console.warn(`[SmartGuard] Could not connect to ESP32 at ${ip}:`, err);
+    console.warn(`[SmartGuard] Attempting to connect to ESP32 at ${ip}... (no blocking popup)`, err);
   }
 }
 window.connectHelmetDirectly = connectHelmetDirectly;
@@ -783,8 +769,8 @@ function startHeartbeatMonitor(helmetId) {
       if (contactEl) contactEl.textContent = contactStr;
     } catch (netErr) {
       consecutiveFailures++;
-      // If Wi-Fi is turned off or disconnected (2 consecutive failed checks ~ 5 seconds):
-      if (consecutiveFailures >= 2) {
+      // If Wi-Fi is turned off or disconnected for > 15 seconds (6 consecutive failures):
+      if (consecutiveFailures >= 6) {
         console.warn(`[SmartGuard] Wi-Fi turned off or ESP32 disconnected. Auto-disconnecting ${helmetId}...`);
         if (heartbeatTimer) {
           clearInterval(heartbeatTimer);
