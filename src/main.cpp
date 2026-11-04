@@ -408,9 +408,10 @@ void triggerMotionAlert(const String &reason) {
 void delayWithOutputs(unsigned long ms) {
   unsigned long start = millis();
   while (millis() - start < ms) {
+    server.handleClient();
     updateButton();
     updateOutputs();
-    delay(5);
+    delay(2);
   }
 }
 
@@ -419,6 +420,7 @@ void alertWorkerFirst(unsigned long durationMs) {
   Serial.println("[ALERT] Local alarm activated FIRST (Buzzer & Vibration Motor)!");
   unsigned long startAlert = millis();
   while (millis() - startAlert < durationMs) {
+    server.handleClient();
     updateButton();
     updateOutputs();
     if (!motionAlert && !pulseAlertActive && !emergencyActive) {
@@ -461,6 +463,7 @@ bool waitForGSMResponse(const String &expected, unsigned long timeoutMs) {
       }
     }
 
+    server.handleClient();
     updateButton();
     updateOutputs();
 
@@ -683,6 +686,7 @@ bool sendEmergencySMS(const String &alertType) {
         Serial.write(rc);
         regResp += rc;
       }
+      server.handleClient();
       updateButton();
       updateOutputs();
       delay(2);
@@ -895,6 +899,9 @@ void triggerEmergency() {
 
   setEvent("EMERGENCY EVENT: 4-sec SOS hold triggered");
 
+  // Immediately service web requests so dashboard receives SOS alert state instantly
+  server.handleClient();
+
   Serial.println();
   Serial.println("****************************************");
   Serial.println("       SMARTGUARD SOS EMERGENCY");
@@ -906,9 +913,11 @@ void triggerEmergency() {
   // 1. Exactly ONE beep and ONE vibration for SOS button (500ms single pulse)
   setBuzzerState(true, 3000);
   digitalWrite(MOTOR_PIN, HIGH);
-  delay(500);
+  delayWithOutputs(500);
   setBuzzerState(false);
   digitalWrite(MOTOR_PIN, LOW);
+
+  server.handleClient();
 
   Serial.println("[SOS] Confirmation pulse complete. Sending emergency SMS...");
 
@@ -926,6 +935,7 @@ void triggerEmergency() {
   }
 
   updateOutputs();
+  server.handleClient();
 }
 
 // =====================================================

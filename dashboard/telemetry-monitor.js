@@ -523,6 +523,8 @@ window.applyCustomIp = applyCustomIp;
 // API Communication
 // ----------------------------------------------------
 
+let telemetryFailures = 0;
+
 async function fetchTelemetry() {
   if (isUserDisconnected) return;
   const t0 = performance.now();
@@ -556,6 +558,7 @@ async function fetchTelemetry() {
     const data = await res.json();
     const pingMs = Math.round(performance.now() - t0);
 
+    telemetryFailures = 0; // Reset consecutive failures on success
     setConnectionState(true);
     if (ipPingDot) {
       ipPingDot.className = "status-dot connected";
@@ -566,19 +569,23 @@ async function fetchTelemetry() {
 
     updateDashboard(data);
   } catch (err) {
-    setConnectionState(false);
-    if (ipPingDot) {
-      ipPingDot.className = "status-dot offline";
-    }
-    if (ipLatencyText) {
-      ipLatencyText.textContent = `Target unreachable: ${targetIp}`;
-    }
+    telemetryFailures++;
+    // Only display Disconnected banner if 3 consecutive polls fail (> 4-5 seconds)
+    if (telemetryFailures >= 3) {
+      setConnectionState(false);
+      if (ipPingDot) {
+        ipPingDot.className = "status-dot offline";
+      }
+      if (ipLatencyText) {
+        ipLatencyText.textContent = `Target unreachable: ${targetIp}`;
+      }
 
-    elements.bannerTitle.textContent = "Helmet Telemetry Disconnected";
-    elements.bannerDesc.textContent =
-      `Could not reach ESP32 at http://${targetIp}/api. Make sure your device is connected to the 'SmartGuard-ESP32' Wi-Fi network or local site router.`;
-    elements.heroBanner.className = "hero-banner danger";
-    elements.statusTag.textContent = "OFFLINE";
+      elements.bannerTitle.textContent = "Helmet Telemetry Disconnected";
+      elements.bannerDesc.textContent =
+        `Could not reach ESP32 at http://${targetIp}/api. Make sure your device is connected to the 'SmartGuard-ESP32' Wi-Fi network or local site router.`;
+      elements.heroBanner.className = "hero-banner danger";
+      elements.statusTag.textContent = "OFFLINE";
+    }
   }
 }
 

@@ -357,20 +357,26 @@ function updateDashboard(data) {
 // API Communication
 // ----------------------------------------------------
 
+let scriptFailures = 0;
+
 async function fetchTelemetry() {
   try {
     const res = await fetch("/api", { cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    scriptFailures = 0;
     setConnectionState(true);
     updateDashboard(data);
   } catch (err) {
-    setConnectionState(false);
-    elements.bannerTitle.textContent = "Helmet Telemetry Disconnected";
-    elements.bannerDesc.textContent =
-      "Check connection to SmartGuard-ESP32 Wi-Fi network.";
-    elements.heroBanner.className = "hero-banner danger";
-    elements.statusTag.textContent = "OFFLINE";
+    scriptFailures++;
+    if (scriptFailures >= 3) {
+      setConnectionState(false);
+      elements.bannerTitle.textContent = "Helmet Telemetry Disconnected";
+      elements.bannerDesc.textContent =
+        "Check connection to SmartGuard-ESP32 Wi-Fi network.";
+      elements.heroBanner.className = "hero-banner danger";
+      elements.statusTag.textContent = "OFFLINE";
+    }
   }
 }
 
