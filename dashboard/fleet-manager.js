@@ -606,14 +606,6 @@ function saveAndConnectHelmet() {
 
   const targetHelmet = fleetData[idx];
   closeConnectModal();
-
-  // Ask if supervisor wants to jump directly to live telemetry
-  const goToMonitor = window.confirm(
-    `Helmet "${targetHelmet.id}" is now configured with IP ${ipVal}!\n\nDo you want to open Live Telemetry for ${targetHelmet.name} now?`
-  );
-  if (goToMonitor) {
-    window.location.href = `live-telemetry.html?id=${encodeURIComponent(targetHelmet.id)}&name=${encodeURIComponent(targetHelmet.name)}&ip=${encodeURIComponent(ipVal)}`;
-  }
 }
 window.saveAndConnectHelmet = saveAndConnectHelmet;
 
@@ -732,12 +724,7 @@ async function connectHelmetDirectly(helmetId) {
       btn.disabled = false;
       btn.innerHTML = origHtml;
     }
-    const retry = confirm(
-      `Could not connect to ESP32 at ${ip}.\n\nPlease ensure your computer is connected to the 'SmartGuard-ESP32' Wi-Fi network.\n\nDo you want to reconfigure the IP address for ${helmet.id}?`
-    );
-    if (retry) {
-      openConnectModal(helmetId);
-    }
+    console.warn(`[SmartGuard] Could not connect to ESP32 at ${ip}:`, err);
   }
 }
 window.connectHelmetDirectly = connectHelmetDirectly;
