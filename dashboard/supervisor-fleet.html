@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SmartGuard | Supervisor Fleet Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="site-theme.css">
+  <script src="fleet-manager.js" defer></script>
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <header class="top-nav">
+    <div class="nav-container">
+      <a href="index.html" class="brand-link">
+        <div class="brand-logo">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-name">SmartGuard <span class="badge-tag">SUPERVISOR</span></div>
+          <div class="brand-tagline">Fleet Command & Worker Administration</div>
+        </div>
+      </a>
+
+      <nav>
+        <ul class="nav-links">
+          <li><a href="index.html" class="nav-btn">Home</a></li>
+          <li><a href="supervisor-fleet.html" class="nav-btn active">Helmet Fleet</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main-wrapper">
+
+    <!-- Page Title & Header Row -->
+    <div class="page-header-row">
+      <div>
+        <h1 class="page-title">Supervisor Helmet Fleet</h1>
+        <p class="page-subtitle">Track, register, edit, and monitor all worker safety helmets.</p>
+      </div>
+      <div class="header-action-group">
+        <button class="btn-add-helmet" id="openAddModalBtn" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>Add Worker Helmet</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Search, Filter & Quick Toolbar -->
+    <section class="toolbar-card">
+      <div class="search-box-wrap">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input 
+          type="text" 
+          id="searchInput" 
+          class="search-input" 
+          placeholder="Search by Helmet ID (e.g. HLM-01) or Worker Name..."
+          autocomplete="off"
+        >
+      </div>
+
+      <div class="filter-group">
+        <select id="statusFilter" class="filter-select">
+          <option value="ALL">All Statuses (Show All)</option>
+          <option value="NORMAL">🟢 Normal / Safe Only</option>
+          <option value="WARNING">🟡 Warning (Gas / Temp)</option>
+          <option value="DANGER">🔴 Emergency / Fall Alert</option>
+          <option value="OFFLINE">⚪ Offline Helmets</option>
+        </select>
+        <select id="zoneFilter" class="filter-select">
+          <option value="ALL">All Work Zones</option>
+          <option value="Zone A - Scaffold Tower">Zone A - Scaffold Tower</option>
+          <option value="Zone B - Excavation Pit">Zone B - Excavation Pit</option>
+          <option value="Zone C - Chemical Storage">Zone C - Chemical Storage</option>
+          <option value="Zone D - Welding Bay">Zone D - Welding Bay</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Fleet Cards Container -->
+    <section id="fleetGrid" class="fleet-grid">
+      <!-- Dynamic helmet cards injected via fleet-manager.js -->
+    </section>
+
+    <!-- Empty State Message (hidden by default) -->
+    <div id="emptyState" style="display: none; text-align: center; padding: 48px 20px; background: white; border: 1.5px dashed #cbd5e1; border-radius: 14px; margin-top: 20px;">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 12px;">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+      <h3 style="font-size: 18px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">No Helmets Found</h3>
+      <p style="font-size: 14px; color: #64748b;">No registered helmets match your current search or filter criteria.</p>
+    </div>
+
+  </main>
+
+  <!-- Interactive Modal for Adding / Connecting Worker Helmet with 2 Tabs -->
+  <div class="modal-overlay" id="helmetModal">
+    <div class="modal-box helmet-modal-box">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="modalTitle">Add Worker Helmet</h3>
+          <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;" id="modalSubtitle">
+            Search for active helmets on your network or connect manually.
+          </p>
+        </div>
+        <button class="btn-close-modal" id="closeModalBtn" type="button" onclick="closeModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Two Tabs Navigation -->
+      <div class="modal-tabs-nav" id="helmetModalTabs">
+        <button type="button" class="modal-tab-btn active" id="tabBtnSearch" onclick="switchHelmetModalTab('search')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <span>Search for Available Helmet</span>
+        </button>
+        <button type="button" class="modal-tab-btn" id="tabBtnManual" onclick="switchHelmetModalTab('manual')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          <span>Connect Helmet Manually</span>
+        </button>
+      </div>
+
+      <!-- Tab Panel 1: Search for Available Helmet (Auto Discovery) -->
+      <div class="modal-tab-content active" id="tabContentSearch">
+        <div class="scan-header-action" style="text-align: center; padding: 18px 12px; background: var(--bg-subtle); border: 1.5px solid var(--border-light); border-radius: 12px;">
+          <p style="font-size: 13.5px; font-weight: 700; color: var(--text-main); margin-bottom: 12px;">
+            Turn on your battery-powered helmet. The scanner will automatically detect any active SmartGuard helmets nearby.
+          </p>
+          <button type="button" class="btn-start-scan" id="startScanBtn" onclick="startHelmetDiscovery()" style="padding: 12px 28px; font-size: 14px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <span id="scanBtnLabel">🔍 Scan for Nearby Helmets</span>
+          </button>
+        </div>
+
+        <!-- Scanning Progress Bar -->
+        <div id="scanProgressBarWrap" style="display: none; margin: 16px 0 12px;">
+          <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--text-body); margin-bottom: 5px;">
+            <span id="scanStatusText">Searching for active helmets in your environment...</span>
+            <span id="scanPercentText">0%</span>
+          </div>
+          <div class="scan-progress-bar">
+            <div class="scan-progress-fill" id="scanProgressFill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Discovered Helmets List Container -->
+        <div class="discovered-results-wrap" style="margin-top: 14px;">
+          <div class="discovered-header-row">
+            <span style="font-size: 13.5px; font-weight: 800; color: var(--text-main);">
+              Discovered Active Helmets (<span id="discoveredCount">0</span>)
+            </span>
+            <span style="font-size: 11.5px; color: var(--text-muted);" id="scanSpeedHint">Fast concurrent scan</span>
+          </div>
+
+          <div id="discoveredHelmetsList" class="discovered-helmets-list">
+            <!-- Discovered items injected dynamically -->
+            <div class="discovery-empty-placeholder" id="discoveryEmptyMsg">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 8px;">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <p style="font-size: 13.5px; font-weight: 800; color: #334155; margin-bottom: 4px;">No active helmets scanned yet</p>
+              <p style="font-size: 12px; color: #64748b; margin: 0; max-width: 420px; line-height: 1.5;">Power on your battery-powered SmartGuard helmet(s), connect your device to Wi-Fi, then click <strong>"Start Network Scan"</strong> above.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="margin-top: 18px;">
+          <button type="button" class="btn-modal-cancel" onclick="closeModal()">Close</button>
+          <button type="button" class="btn-modal-tab-switch" onclick="switchHelmetModalTab('manual')">Or Connect Manually &rarr;</button>
+        </div>
+      </div>
+
+      <!-- Tab Panel 2: Connect Helmet Manually (Form) -->
+      <div class="modal-tab-content" id="tabContentManual" style="display: none;">
+        <form id="helmetForm">
+          <input type="hidden" id="editIndex" value="-1">
+
+          <div class="form-row" style="display: flex; gap: 12px;">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="helmetIdInput">Helmet Hardware ID</label>
+              <input 
+                type="text" 
+                id="helmetIdInput" 
+                class="form-input" 
+                placeholder="e.g. HLM-01" 
+                required
+              >
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="helmetIpInput">ESP32 IP Address / Host</label>
+              <input 
+                type="text" 
+                id="helmetIpInput" 
+                class="form-input" 
+                placeholder="e.g. 192.168.4.1 or 192.168.1.105" 
+                value="192.168.4.1" 
+                required
+              >
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="workerNameInput">Assigned Worker Name</label>
+            <input 
+              type="text" 
+              id="workerNameInput" 
+              class="form-input" 
+              placeholder="e.g. Rajesh Kumar / John Doe" 
+              required
+            >
+          </div>
+
+          <div class="form-row" style="display: flex; gap: 12px;">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="workerZoneInput">Workplace Assigned Zone</label>
+              <select id="workerZoneInput" class="form-select" required>
+                <option value="Zone A - Scaffold Tower">Zone A - Scaffold Tower</option>
+                <option value="Zone B - Excavation Pit">Zone B - Excavation Pit</option>
+                <option value="Zone C - Chemical Storage">Zone C - Chemical Storage</option>
+                <option value="Zone D - Welding Bay">Zone D - Welding Bay</option>
+              </select>
+            </div>
+
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="bloodGroupInput">Worker Blood Group</label>
+              <select id="bloodGroupInput" class="form-select">
+                <option value="O+">O positive (O+)</option>
+                <option value="A+">A positive (A+)</option>
+                <option value="B+">B positive (B+)</option>
+                <option value="AB+">AB positive (AB+)</option>
+                <option value="O-">O negative (O-)</option>
+                <option value="A-">A negative (A-)</option>
+                <option value="B-">B negative (B-)</option>
+                <option value="AB-">AB negative (AB-)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="statusInput">Initial Helmet Status</label>
+            <select id="statusInput" class="form-select">
+              <option value="NORMAL">🟢 Normal (Active & Safe)</option>
+              <option value="WARNING">🟡 Environmental Warning</option>
+              <option value="DANGER">🔴 Critical / Emergency Alert</option>
+              <option value="OFFLINE">⚪ Standby / Offline</option>
+            </select>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn-modal-cancel" id="cancelModalBtn" onclick="closeModal()">Cancel</button>
+            <button type="submit" class="btn-modal-save" id="saveHelmetBtn">Save Helmet</button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Interactive Connect Helmet Modal (for direct card action) -->
+  <div class="modal-overlay" id="connectModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="connectModalTitle">Connect Helmet ESP32</h3>
+          <p style="font-size: 13px; color: var(--text-muted); margin-top: 2px;" id="connectModalSubtitle">Select helmet to link</p>
+        </div>
+        <button class="btn-close-modal" id="closeConnectModalBtn" type="button" onclick="closeConnectModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="connect-modal-body" style="padding: 10px 0;">
+        <div class="form-group">
+          <label class="form-label" for="connectIpInput">Helmet ESP32 IP Address / Host</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="connectIpInput" class="form-input" placeholder="e.g. 192.168.4.1" value="192.168.4.1" style="flex: 1;">
+            <button type="button" class="btn-ping-action" id="pingBtn" onclick="testPingInModal()" style="padding: 8px 14px; background: #eff6ff; border: 1.5px solid #bfdbfe; color: #1d4ed8; border-radius: 8px; font-weight: 700; cursor: pointer; white-space: nowrap;">
+              <span>Ping Test</span>
+            </button>
+          </div>
+          <span style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">
+            Default SoftAP Hotspot IP is <code>192.168.4.1</code>. For site router, enter the assigned local IP.
+          </span>
+        </div>
+
+        <div id="pingResultBox" style="display: none; padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; font-size: 12.5px; font-weight: 700;"></div>
+
+        <div class="wifi-guide-box" style="background: var(--bg-subtle); border: 1.5px solid var(--border-light); border-radius: 10px; padding: 12px 14px; margin-top: 10px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 13px; color: var(--text-main); margin-bottom: 6px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+              <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+              <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+              <line x1="12" y1="20" x2="12.01" y2="20"/>
+            </svg>
+            <span>Direct Helmet Wi-Fi Connection Guide</span>
+          </div>
+          <ul style="font-size: 12px; color: var(--text-body); line-height: 1.6; padding-left: 18px; margin: 0;">
+            <li>On your phone or laptop, open Wi-Fi settings.</li>
+            <li>Connect to Wi-Fi SSID: <strong>SmartGuard-ESP32</strong></li>
+            <li>Password: <code>guard1234</code></li>
+            <li>Once connected, click <strong>"Save & Connect Now"</strong> below.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-modal-cancel" onclick="closeConnectModal()">Cancel</button>
+        <button type="button" class="btn-modal-save" onclick="saveAndConnectHelmet()">Save & Connect</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Universal Footer -->
+  <footer class="app-footer">
+    <p><strong>SmartGuard™ Supervisor Console</strong> · Local Wi-Fi AP Mode (192.168.4.1)</p>
+    <p>Connected to ESP32 Smart Helmet Telemetry Unit.</p>
+  </footer>
+
+</body>
+</html>

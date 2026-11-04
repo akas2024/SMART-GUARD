@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SmartGuard | Industrial Worker Safety Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="site-theme.css">
+</head>
+<body>
+
+  <!-- Universal Top Navigation -->
+  <header class="top-nav">
+    <div class="nav-container">
+      <a href="index.html" class="brand-link">
+        <div class="brand-logo">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-name">SmartGuard <span class="badge-tag">ENTERPRISE</span></div>
+          <div class="brand-tagline">Industrial Helmet Safety Platform</div>
+        </div>
+      </a>
+
+      <nav>
+        <ul class="nav-links">
+          <li><a href="index.html" class="nav-btn active">Home</a></li>
+          <li><a href="supervisor-fleet.html" class="nav-btn nav-cta-btn">Supervisor Portal</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Interactive Hero Showcase with Background Image -->
+  <section class="home-hero">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <div class="hero-pill">
+        <span class="pulse-dot"></span>
+        <span>IOT WORKER PROTECTION PLATFORM</span>
+      </div>
+      <h1 class="hero-title">Protecting Lives on Every Site with <span>SmartGuard</span></h1>
+      <p class="hero-desc">
+        A complete industrial safety ecosystem featuring real-time biometric pulse monitoring, fall & impact detection, environmental toxic gas alerts, and centralized supervisor fleet management.
+      </p>
+
+      <div class="hero-btn-group">
+        <a href="supervisor-fleet.html" class="btn-primary-hero">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <span>Enter Supervisor Fleet Portal</span>
+        </a>
+      </div>
+
+      <div class="hero-stats-bar">
+        <div class="hero-stat-item">
+          <h4>12 Helmets</h4>
+          <p>Active Fleet On Site</p>
+        </div>
+        <div class="hero-stat-item">
+          <h4>99.9%</h4>
+          <p>Uptime & Connectivity</p>
+        </div>
+        <div class="hero-stat-item">
+          <h4>0 Critical</h4>
+          <p>Hazards Unresolved</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features & Architecture Overview -->
+  <main class="main-wrapper">
+    <div class="page-header-row">
+      <div>
+        <h2 class="page-title">Safety System Architecture</h2>
+        <p class="page-subtitle">End-to-end telemetry from wearable hardware to supervisor command</p>
+      </div>
+      <a href="supervisor-fleet.html" class="nav-btn nav-cta-btn">Manage Helmets →</a>
+    </div>
+
+    <!-- Feature Cards Grid -->
+    <div class="features-grid">
+      <!-- Feature 1 -->
+      <article class="feature-card">
+        <div>
+          <div class="helmet-id-badge">SUPERVISOR CONTROL</div>
+          <h3 class="worker-name">Centralized Fleet Management</h3>
+          <p class="worker-zone" style="margin-top: 8px;">
+            Supervisors can add new helmets, assign worker profiles, edit personnel details, and monitor safety status by Helmet ID or Worker Name.
+          </p>
+        </div>
+        <div class="feature-card-actions" style="margin-top: 18px;">
+          <a href="supervisor-fleet.html" class="btn-monitor">Open Fleet Portal</a>
+        </div>
+      </article>
+
+      <!-- Feature 2 -->
+      <article class="feature-card">
+        <div>
+          <div class="helmet-id-badge">MPU6050 MOTION</div>
+          <h3 class="worker-name">Fall & Impact Detection</h3>
+          <p class="worker-zone" style="margin-top: 8px;">
+            Automatic detection of high-impact collisions exceeding 24.5 m/s² (2.5g) and a 60-second inactivity watchdog for collapsed workers.
+          </p>
+        </div>
+        <div class="feature-card-actions" style="margin-top: 18px;">
+          <a href="live-telemetry.html" class="btn-monitor">View Motion Telemetry</a>
+        </div>
+      </article>
+
+      <!-- Feature 3 -->
+      <article class="feature-card">
+        <div>
+          <div class="helmet-id-badge">MAX30102 BIOMETRICS</div>
+          <h3 class="worker-name">Heart Rate & Wear Status</h3>
+          <p class="worker-zone" style="margin-top: 8px;">
+            Continuous optical PPG pulse monitoring calculating live BPM, paired with wear detection confirming whether the helmet is worn on the head.
+          </p>
+        </div>
+        <div class="feature-card-actions" style="margin-top: 18px;">
+          <a href="live-telemetry.html" class="btn-monitor">View Pulse Telemetry</a>
+        </div>
+      </article>
+
+      <!-- Feature 4 -->
+      <article class="feature-card">
+        <div>
+          <div class="helmet-id-badge">DHT22 & MQ135</div>
+          <h3 class="worker-name">Environmental Hazard Guard</h3>
+          <p class="worker-zone" style="margin-top: 8px;">
+            Continuous air quality sampling detecting toxic combustible gases, combined with ambient temperature and humidity threshold alerts.
+          </p>
+        </div>
+        <div class="feature-card-actions" style="margin-top: 18px;">
+          <a href="live-telemetry.html" class="btn-monitor">Check Air Quality</a>
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <!-- Universal Footer -->
+  <footer class="app-footer">
+    <p><strong>SmartGuard™ Enterprise Safety Platform</strong> · Industrial IoT Helmet Network</p>
+    <p>Engineered for High-Risk Construction, Mining & Hazardous Industrial Facilities.</p>
+  </footer>
+
+</body>
+</html>
