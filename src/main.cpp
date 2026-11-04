@@ -76,7 +76,7 @@ const float TEMP_HIGH_C =
     42.0; // Dangerous heat stress (prevents false alarms at room temp)
 const float HUMIDITY_LOW_PERCENT = 10.0;
 const float HUMIDITY_HIGH_PERCENT = 92.0;
-const int MQ135_HIGH_RAW = 2400; // Requires genuine smoke or gas to trigger
+const int MQ135_HIGH_RAW = 1800; // Requires genuine smoke or gas to trigger
 
 // =====================================================
 // FALL / STRIKE DETECTION SETTINGS
@@ -85,7 +85,7 @@ const int MQ135_HIGH_RAW = 2400; // Requires genuine smoke or gas to trigger
 // Strike threshold: 45.0 m/s^2 (~4.6G). Normal movement stays well below 30
 // m/s^2; triggers STRICTLY and ONLY when firmly/hardly struck with a finger on
 // the sensor!
-const float IMPACT_THRESHOLD_MS2 = 20.0;
+const float IMPACT_THRESHOLD_MS2 = 21.0;
 
 // Inactivity check: 3 minutes (only active when helmet is worn)
 const unsigned long INACTIVITY_TIMEOUT_MS = 180000;
@@ -381,9 +381,12 @@ bool initMPUSensor() {
 // =====================================================
 
 void updateOutputs();
+void updateButton();
 void recoverI2CBus();
 void processWorkerAssurance(const String &source);
 bool sendEmergencySMS(const String &alertType = "SOS");
+void alertWorkerFirst(unsigned long durationMs = 1500);
+void delayWithOutputs(unsigned long ms);
 
 void setEvent(const String &message) {
 
@@ -400,6 +403,29 @@ void triggerMotionAlert(const String &reason) {
   motionAlertReason = reason;
 
   setEvent(reason);
+}
+
+void delayWithOutputs(unsigned long ms) {
+  unsigned long start = millis();
+  while (millis() - start < ms) {
+    updateButton();
+    updateOutputs();
+    delay(5);
+  }
+}
+
+void alertWorkerFirst(unsigned long durationMs) {
+  Serial.println();
+  Serial.println("[ALERT] Local alarm activated FIRST (Buzzer & Vibration Motor)!");
+  unsigned long startAlert = millis();
+  while (millis() - startAlert < durationMs) {
+    updateButton();
+    updateOutputs();
+    if (!motionAlert && !pulseAlertActive && !emergencyActive) {
+      break; // Worker acknowledged/cleared alarm
+    }
+    delay(5);
+  }
 }
 
 // =====================================================
@@ -434,6 +460,9 @@ bool waitForGSMResponse(const String &expected, unsigned long timeoutMs) {
         response.remove(0, 150);
       }
     }
+
+    updateButton();
+    updateOutputs();
 
     delay(2);
   }
@@ -654,6 +683,9 @@ bool sendEmergencySMS(const String &alertType) {
         Serial.write(rc);
         regResp += rc;
       }
+      updateButton();
+      updateOutputs();
+      delay(2);
     }
     // Match home (1) or roaming (5) across all CREG format variants
     if (regResp.indexOf(",1") >= 0 || regResp.indexOf(",5") >= 0 ||
@@ -663,7 +695,7 @@ bool sendEmergencySMS(const String &alertType) {
       break;
     }
     Serial.println("\n[GSM] Searching for cell tower (0,2)... waiting 2s");
-    delay(2000);
+    delayWithOutputs(2000);
   }
 
   if (!registered) {
@@ -742,12 +774,12 @@ bool sendEmergencySMS(const String &alertType) {
   }
 
   // Small delay required after '>' prompt
-  delay(200);
+  delayWithOutputs(200);
 
   // Send single clean line
   GSMSerial.print(message);
 
-  delay(200);
+  delayWithOutputs(200);
 
   // Ctrl+Z (ASCII 26) ends the SMS message
   GSMSerial.write(26);
@@ -829,7 +861,7 @@ void processWorkerAssurance(const String &source) {
   environmentWarning = false;
   environmentAcknowledged = true;
   environmentCooldownUntilMs =
-      now + 60000; // 60-second grace period for environment
+      now + 5000; // 5-second grace period for environment
 
   // Stop buzzer and vibration motor immediately, and play 120ms pleasant confirmation chirp
   setBuzzerState(false);
@@ -858,11 +890,7 @@ void triggerEmergency() {
   }
 
   emergencyActive = true;
-
-  // Do not set motionAlert = true for SOS; motionAlert is reserved for physical
-  // sensor alerts (fall/inactivity) which beep continuously. For SOS sending,
-  // we only emit a single confirmation beep!
-  motionAlert = false;
+  motionAlert = true;
   motionAlertReason = "SOS Emergency Active";
 
   setEvent("EMERGENCY EVENT: 4-sec SOS hold triggered");
@@ -873,12 +901,12 @@ void triggerEmergency() {
   Serial.println("****************************************");
 
   Serial.println("Emergency button held for 4 seconds.");
-  Serial.println("Buzzer: Single confirmation beep (not continuous).");
+  Serial.println("Immediate alarm active (Buzzer + Vibration) -> Sending SMS...");
 
-  // Single confirmation beep for SOS sending (350ms, then silent)
-  emergencyConfirmBuzzUntilMs = millis() + 350;
+  // 1. Give buzz and vibration FIRST before sending GSM SMS
+  alertWorkerFirst(1500);
 
-  // Send SMS only once for this emergency until re-armed by assurance.
+  // 2. Send SMS only once for this emergency until re-armed by assurance.
   if (!emergencySMSSent) {
 
     emergencySMSSent = true;
@@ -994,7 +1022,10 @@ void readMPU() {
     setEvent("Worker fall detected! Immediate alert & SMS dispatch");
     triggerMotionAlert("Worker fall detected!");
 
-    // Send SMS for Fall Detection
+    // 1. Give buzz and vibration FIRST before sending GSM SMS
+    alertWorkerFirst(1500);
+
+    // 2. Send SMS for Fall Detection
     if (!fallSMSSent) {
       fallSMSSent = true;
       sendEmergencySMS("FALL");
@@ -1094,6 +1125,9 @@ void readMAX30102() {
         pulseAlertActive = true; // Trigger vibration for MAX30102
         triggerMotionAlert(pulseReason);
 
+        // 1. Give buzz and vibration FIRST before sending GSM SMS
+        alertWorkerFirst(1500);
+
         if (!pulseSMSSent) {
           pulseSMSSent = true;
           sendEmergencySMS(heartRate < HEART_RATE_LOW_BPM ? "PULSE_LOW"
@@ -1131,17 +1165,26 @@ void updateEnvironmentWarning() {
 
   if (readingExceeded) {
 
-    if (!environmentWarning && !environmentAcknowledged) {
+    if (!environmentWarning) {
 
       environmentWarning = true;
+      environmentAcknowledged = false; // Re-arm alarm immediately for buzzing & vibration
 
       setEvent("Environmental threshold exceeded (Gas/Temp/Humidity)!");
+
+      Serial.println();
+      Serial.println("************************************************************");
+      Serial.print(">>> [GAS / HAZARD DETECTED] MQ135 Raw: ");
+      Serial.print(mq135Raw);
+      Serial.println(" -> LOUD BUZZER & VIBRATION ACTIVE! <<<");
+      Serial.println("************************************************************");
+      Serial.println();
     }
 
   } else {
 
     // Readings have returned within normal safe limits
-    if (environmentAcknowledged) {
+    if (environmentWarning || environmentAcknowledged) {
 
       environmentWarning = false;
 
@@ -1161,9 +1204,9 @@ void updateOutputs() {
   unsigned long now = millis();
 
   // Vibration motor: Vibrates in 0.5s pulses (500ms ON / 500ms OFF) during Fall detection,
-  // Environment (DHT22 / MQ135), or Pulse alerts until worker gives assurance (0.5s SOS press)
+  // Environment (DHT22 / MQ135), Pulse alerts, or SOS emergency until worker gives assurance (0.5s SOS press)
   bool vibeAlert =
-      motionAlert || (environmentWarning && !environmentAcknowledged) || pulseAlertActive;
+      motionAlert || (environmentWarning && !environmentAcknowledged) || pulseAlertActive || emergencyActive;
   if (vibeAlert) {
     bool vibePhase = ((now % 1000) < 500); // 0.5s ON, 0.5s OFF
     motorOn = vibePhase;
@@ -1173,27 +1216,21 @@ void updateOutputs() {
     digitalWrite(MOTOR_PIN, LOW);
   }
 
-  // 1. SOS sending: single confirmation beep (350ms at 3000 Hz, then stops)
-  if (now < emergencyConfirmBuzzUntilMs) {
-    buzzerOn = true;
-    setBuzzerState(true, 3000);
-    return;
-  }
-
-  // 2. Worker assurance acknowledgment: short 120ms pleasant chirp
+  // 1. Worker assurance acknowledgment: short 120ms pleasant chirp
   if (now < assuranceChirpUntilMs) {
     buzzerOn = true;
     setBuzzerState(true, 2500);
     return;
   }
 
-  // 3. Continuous alert beeping:
+  // 2. Continuous alert beeping:
   // Continuous loud high-frequency beeping for: Temperature, Gas, Inactivity,
-  // Sudden fall detected. Continues beeping until worker presses the button for
-  // 0.5 sec to stop all buzzing.
+  // Sudden fall detected, Pulse alert, SOS emergency.
+  // Continues beeping until worker presses the button for 0.5 sec to stop all buzzing.
   bool alarmActive = motionAlert ||
                      (environmentWarning && !environmentAcknowledged) ||
-                     pulseAlertActive;
+                     pulseAlertActive ||
+                     emergencyActive;
 
   if (alarmActive) {
     buzzerOn = true;
