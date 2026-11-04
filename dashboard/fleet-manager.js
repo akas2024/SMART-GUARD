@@ -589,8 +589,9 @@ window.testPingInModal = testPingInModal;
 function saveAndConnectHelmet() {
   if (!activeConnectingHelmetId) return;
   const ipVal = (connectIpInput ? connectIpInput.value.trim() : "") || "192.168.4.1";
+  const helmetId = activeConnectingHelmetId;
 
-  const idx = fleetData.findIndex((h) => h.id === activeConnectingHelmetId);
+  const idx = fleetData.findIndex((h) => h.id === helmetId);
   if (idx !== -1) {
     fleetData[idx].ip = ipVal;
     saveFleetData();
@@ -600,12 +601,14 @@ function saveAndConnectHelmet() {
     localStorage.setItem("smartguard_active_helmet_id", fleetData[idx].id);
     localStorage.setItem("smartguard_active_worker_name", fleetData[idx].name);
     localStorage.setItem("smartguard_active_zone", fleetData[idx].zone || "Zone C - Chemical Storage");
-    renderFleet(activeConnectingHelmetId);
+    renderFleet(helmetId);
     startHeartbeatMonitor(activeConnectedHelmetId);
   }
 
-  const targetHelmet = fleetData[idx];
   closeConnectModal();
+
+  // Connect to ESP32 to fetch live sensor values directly onto the card (without auto-opening monitor tab)
+  connectHelmetDirectly(helmetId);
 }
 window.saveAndConnectHelmet = saveAndConnectHelmet;
 
@@ -724,7 +727,12 @@ async function connectHelmetDirectly(helmetId) {
       btn.disabled = false;
       btn.innerHTML = origHtml;
     }
-    console.warn(`[SmartGuard] Could not connect to ESP32 at ${ip}:`, err);
+    const retry = confirm(
+      `Could not connect to ESP32 at ${ip}.\n\nPlease ensure your computer is connected to the 'SmartGuard-ESP32' Wi-Fi network.\n\nDo you want to reconfigure the IP address for ${helmet.id}?`
+    );
+    if (retry) {
+      openConnectModal(helmetId);
+    }
   }
 }
 window.connectHelmetDirectly = connectHelmetDirectly;
@@ -1116,14 +1124,8 @@ function connectDiscoveredHelmet(ip, deviceId, deviceName) {
     setActiveHelmetSession(deviceId);
     renderFleet(deviceId);
     renderDiscoveredList();
-
-    const goToTelemetry = window.confirm(
-      `Helmet "${deviceId}" (${workerName.trim()}) added and connected successfully!\n\nDo you want to open its Live Telemetry now?`
-    );
-    if (goToTelemetry) {
-      closeDiscoveryModal();
-      window.location.href = `live-telemetry.html?id=${encodeURIComponent(deviceId)}&name=${encodeURIComponent(workerName.trim())}&ip=${encodeURIComponent(ip)}`;
-    }
+    closeDiscoveryModal();
+    connectHelmetDirectly(deviceId);
   }
 }
 window.connectDiscoveredHelmet = connectDiscoveredHelmet;
