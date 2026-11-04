@@ -890,7 +890,7 @@ void triggerEmergency() {
   }
 
   emergencyActive = true;
-  motionAlert = true;
+  motionAlert = false; // Do not trigger continuous physical sensor alarm
   motionAlertReason = "SOS Emergency Active";
 
   setEvent("EMERGENCY EVENT: 4-sec SOS hold triggered");
@@ -901,10 +901,16 @@ void triggerEmergency() {
   Serial.println("****************************************");
 
   Serial.println("Emergency button held for 4 seconds.");
-  Serial.println("Immediate alarm active (Buzzer + Vibration) -> Sending SMS...");
+  Serial.println("Triggering exactly ONE beep and ONE vibration confirmation (not continuous)...");
 
-  // 1. Give buzz and vibration FIRST before sending GSM SMS
-  alertWorkerFirst(1500);
+  // 1. Exactly ONE beep and ONE vibration for SOS button (500ms single pulse)
+  setBuzzerState(true, 3000);
+  digitalWrite(MOTOR_PIN, HIGH);
+  delay(500);
+  setBuzzerState(false);
+  digitalWrite(MOTOR_PIN, LOW);
+
+  Serial.println("[SOS] Confirmation pulse complete. Sending emergency SMS...");
 
   // 2. Send SMS only once for this emergency until re-armed by assurance.
   if (!emergencySMSSent) {
@@ -1204,9 +1210,10 @@ void updateOutputs() {
   unsigned long now = millis();
 
   // Vibration motor: Vibrates in 0.5s pulses (500ms ON / 500ms OFF) during Fall detection,
-  // Environment (DHT22 / MQ135), Pulse alerts, or SOS emergency until worker gives assurance (0.5s SOS press)
+  // Environment (DHT22 / MQ135), or Pulse alerts until worker gives assurance (0.5s SOS press).
+  // (NOTE: 4-sec SOS button uses only a single confirmation beep and single vibration pulse, not continuous)
   bool vibeAlert =
-      motionAlert || (environmentWarning && !environmentAcknowledged) || pulseAlertActive || emergencyActive;
+      motionAlert || (environmentWarning && !environmentAcknowledged) || pulseAlertActive;
   if (vibeAlert) {
     bool vibePhase = ((now % 1000) < 500); // 0.5s ON, 0.5s OFF
     motorOn = vibePhase;
@@ -1225,12 +1232,12 @@ void updateOutputs() {
 
   // 2. Continuous alert beeping:
   // Continuous loud high-frequency beeping for: Temperature, Gas, Inactivity,
-  // Sudden fall detected, Pulse alert, SOS emergency.
+  // Sudden fall detected, Pulse alert.
+  // (NOTE: 4-sec SOS button uses only a single confirmation beep and single vibration pulse, not continuous)
   // Continues beeping until worker presses the button for 0.5 sec to stop all buzzing.
   bool alarmActive = motionAlert ||
                      (environmentWarning && !environmentAcknowledged) ||
-                     pulseAlertActive ||
-                     emergencyActive;
+                     pulseAlertActive;
 
   if (alarmActive) {
     buzzerOn = true;
