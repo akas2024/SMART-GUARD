@@ -1961,7 +1961,7 @@ void loop() {
 
     // Initialize or adapt baseline in clean air (below alert threshold)
     if (baseline == 0) {
-      baseline = (currentSample < 1800) ? currentSample : 700;
+      baseline = (currentSample < MQ135_HIGH_RAW) ? currentSample : 700;
     } else if (currentSample < 1400) {
       baseline = (int)(0.95f * baseline + 0.05f * currentSample);
     }

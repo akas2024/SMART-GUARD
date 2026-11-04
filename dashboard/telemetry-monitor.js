@@ -378,9 +378,9 @@ function updateEnvironment(data) {
   const pct = Math.min(100, Math.max(5, (gas / 2400) * 100));
   elements.gasBarFill.style.width = `${pct}%`;
 
-  if (gas >= 1800) {
+  if (gas >= 2400) {
     elements.gasBarFill.style.background = "#dc2626";
-  } else if (gas >= 1000) {
+  } else if (gas >= 1200) {
     elements.gasBarFill.style.background = "#d97706";
   } else {
     elements.gasBarFill.style.background = "linear-gradient(to right, #059669, #d97706)";
