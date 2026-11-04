@@ -1947,21 +1947,55 @@ void loop() {
 
     lastEnvironmentReadMs = now;
 
-    // Fast multi-sample oversampling (4 samples) to filter ADC electrical jitter
+    // Instant oversampling (4 fast samples) to reject single-tick ADC electrical jitter
     int rawSum = 0;
     for (int i = 0; i < 4; i++) {
       rawSum += analogRead(MQ135_PIN);
-      delayMicroseconds(150);
+      delayMicroseconds(50);
     }
     int currentSample = rawSum / 4;
 
-    // Fast-response adaptive filter:
-    // Uses 80% weight on new reading for immediate gas/smoke response and rapid clean-air recovery,
-    // with 20% smoothing to eliminate false noise spikes.
-    if (mq135Raw == 0) {
-      mq135Raw = currentSample;
+    static int baseline = 0;
+    static int peakValue = 0;
+    static float virtualGas = 0.0f;
+
+    // Initialize or adapt baseline in clean air (below alert threshold)
+    if (baseline == 0) {
+      baseline = (currentSample < 1800) ? currentSample : 700;
+    } else if (currentSample < 1400) {
+      baseline = (int)(0.95f * baseline + 0.05f * currentSample);
+    }
+
+    if (currentSample < baseline) {
+      baseline = currentSample; // Follow cleaner air immediately
+    }
+
+    // 1. Gas/Smoke Attack: Instantaneous sensitivity (zero software lag)
+    if (currentSample >= peakValue || currentSample > mq135Raw + 30) {
+      peakValue = currentSample;
+      virtualGas = (float)(currentSample - baseline);
+      mq135Raw = currentSample; // Shoots up immediately when smoke/gas arrives
     } else {
-      mq135Raw = (int)(0.80f * currentSample + 0.20f * mq135Raw + 0.5f);
+      // 2. Gas/Smoke Clearing: Accelerated desorption recovery
+      // Physical tin-dioxide naturally takes 30-60s to desorb; detect drop and plunge value down rapidly
+      int drop = peakValue - currentSample;
+      if (drop > 20) {
+        // Drop rapidly (decay by 25% + 60 units per 100ms cycle -> returns to baseline in ~0.8s)
+        virtualGas = virtualGas * 0.75f - 60.0f;
+        if (virtualGas < 0) virtualGas = 0;
+
+        int calculated = baseline + (int)virtualGas;
+        mq135Raw = min(currentSample, calculated);
+      } else {
+        // Hovering at peak
+        mq135Raw = currentSample;
+      }
+    }
+
+    // When fully returned to clean air baseline, reset peak tracker
+    if (mq135Raw <= baseline + 60) {
+      peakValue = currentSample;
+      virtualGas = 0.0f;
     }
 
     updateEnvironmentWarning();
